@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Notes Sentinel</title>
+    <meta name="description" content="Stay updated with the latest Google Cloud BigQuery release notes. Track features, breaking changes, and issues, with direct sharing to X (Twitter).">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dark-theme">
+    <!-- Confetti Canvas for Tweet Simulation -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <div class="app-container">
+        <!-- Sidebar / Header -->
+        <header class="app-header">
+            <div class="brand-container">
+                <div class="logo-circle">
+                    <i data-lucide="database" class="logo-icon"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>BQ Sentinel</h1>
+                    <span class="sub-brand">BigQuery Release Monitor</span>
+                </div>
+            </div>
+
+            <!-- Stats Dashboard Grid -->
+            <div class="stats-grid">
+                <div class="stat-card" id="stat-total">
+                    <span class="stat-label">Total Logs</span>
+                    <span class="stat-value">0</span>
+                    <i data-lucide="list" class="stat-icon"></i>
+                </div>
+                <div class="stat-card" id="stat-features">
+                    <span class="stat-label">Features</span>
+                    <span class="stat-value">0</span>
+                    <i data-lucide="sparkles" class="stat-icon status-feature"></i>
+                </div>
+                <div class="stat-card" id="stat-breaking">
+                    <span class="stat-label">Breaking</span>
+                    <span class="stat-value">0</span>
+                    <i data-lucide="alert-octagon" class="stat-icon status-breaking"></i>
+                </div>
+                <div class="stat-card" id="stat-issues">
+                    <span class="stat-label">Issues</span>
+                    <span class="stat-value">0</span>
+                    <i data-lucide="bug" class="stat-icon status-issue"></i>
+                </div>
+            </div>
+
+            <!-- Global Actions -->
+            <div class="header-actions">
+                <div class="sync-status">
+                    <span class="status-indicator-dot synced"></span>
+                    <span id="sync-text">Sync Status: Ready</span>
+                </div>
+                
+                <button id="btn-refresh" class="btn btn-primary btn-icon-only" title="Refresh Release Notes" aria-label="Refresh Release Notes">
+                    <i data-lucide="refresh-cw" id="spinner-icon"></i>
+                </button>
+
+                <button id="btn-theme-toggle" class="btn btn-secondary btn-icon-only" title="Toggle Theme" aria-label="Toggle Theme">
+                    <i data-lucide="sun" id="theme-icon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="app-main">
+            <!-- Filter & Search Toolbar -->
+            <section class="toolbar" aria-label="Filter and Search Release Notes">
+                <div class="search-wrapper">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" id="search-input" placeholder="Search across release notes..." aria-label="Search across release notes">
+                    <button id="btn-clear-search" class="clear-search-btn" title="Clear search" aria-label="Clear search" style="display: none;">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+
+                <div class="filters-group">
+                    <div class="tabs-container" role="tablist" aria-label="Filter by type">
+                        <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="feed-container" data-filter="all">All</button>
+                        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="feed-container" data-filter="feature">Features</button>
+                        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="feed-container" data-filter="breaking">Breaking</button>
+                        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="feed-container" data-filter="issue">Issues</button>
+                        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="feed-container" data-filter="other">Others</button>
+                    </div>
+
+                    <div class="sort-wrapper">
+                        <label for="sort-select" class="sr-only">Sort by date</label>
+                        <select id="sort-select" class="sort-dropdown">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Release Notes List Container -->
+            <section class="feed-section">
+                <!-- Skeleton Loading State -->
+                <div id="skeleton-loader" class="skeleton-container" style="display: none;">
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <div class="empty-icon-wrapper">
+                        <i data-lucide="search-code" class="empty-icon"></i>
+                    </div>
+                    <h3>No matching release notes found</h3>
+                    <p>Try refining your search text or shifting filters to display matching elements.</p>
+                </div>
+
+                <!-- Active Cards Container -->
+                <div id="feed-container" class="feed-container" role="region" aria-live="polite">
+                    <!-- Dynamic cards will be populated here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Tweet Composer Modal Overlay -->
+    <div id="tweet-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+        <div class="modal-card">
+            <header class="modal-header">
+                <h2 id="modal-title"><i data-lucide="send" class="title-icon"></i> Tweet Update</h2>
+                <button id="btn-close-modal" class="btn-close" aria-label="Close modal" title="Close modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </header>
+
+            <div class="modal-body">
+                <!-- Editor Section -->
+                <div class="composer-section">
+                    <label for="tweet-textarea" class="composer-label">Edit your post text:</label>
+                    <textarea id="tweet-textarea" class="tweet-textarea" placeholder="What's happening in Google Cloud?" maxlength="280"></textarea>
+                    
+                    <div class="composer-meta">
+                        <div class="character-counter" id="char-counter">0 / 280</div>
+                        <div class="suggested-tags">
+                            <span class="tag-helper" data-tag="#BigQuery">#BigQuery</span>
+                            <span class="tag-helper" data-tag="#GoogleCloud">#GoogleCloud</span>
+                            <span class="tag-helper" data-tag="#DataEngineering">#DataEngineering</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Mock Twitter Preview -->
+                <div class="preview-section">
+                    <span class="preview-label">Live Preview on X</span>
+                    <div class="mock-tweet-card">
+                        <div class="tweet-user-row">
+                            <div class="tweet-avatar">
+                                <i data-lucide="user"></i>
+                            </div>
+                            <div class="tweet-user-info">
+                                <div class="user-display-name">Cloud Architect <i data-lucide="badge-check" class="verified-badge"></i></div>
+                                <div class="user-handle">@gcp_sentinel</div>
+                            </div>
+                            <i data-lucide="twitter" class="twitter-source-icon"></i>
+                        </div>
+                        <div class="tweet-text-preview" id="tweet-preview-text">
+                            Placeholder tweet text...
+                        </div>
+                        <div class="tweet-card-attachment">
+                            <div class="attachment-image">
+                                <i data-lucide="database"></i>
+                            </div>
+                            <div class="attachment-text">
+                                <div class="attachment-domain">cloud.google.com</div>
+                                <div class="attachment-title">BigQuery Release Notes Feed</div>
+                                <div class="attachment-desc">Official Google Cloud BigQuery product updates and releases.</div>
+                            </div>
+                        </div>
+                        <div class="tweet-actions-row">
+                            <span><i data-lucide="message-circle"></i> 0</span>
+                            <span><i data-lucide="repeat"></i> 0</span>
+                            <span><i data-lucide="heart"></i> 0</span>
+                            <span><i data-lucide="share-2"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="modal-footer">
+                <button id="btn-cancel-tweet" class="btn btn-secondary">Cancel</button>
+                <div class="footer-action-group">
+                    <button id="btn-simulate-tweet" class="btn btn-success">
+                        <i data-lucide="party-popper"></i> Simulate Tweet
+                    </button>
+                    <button id="btn-post-tweet" class="btn btn-primary">
+                        <i data-lucide="twitter"></i> Post to X
+                    </button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container" aria-live="assertive"></div>
+
+    <!-- Lucide Icons Library -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- JavaScript Application Code -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
