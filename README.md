@@ -48,7 +48,7 @@ bigquery-release-notes/
 
 ### 2. Клонирование и переход в директорию
 ```bash
-cd C:\Users\CYBERPACK\agy-cli-projects\bigquery-release-notes
+cd \agy-cli-projects\bigquery-release-notes
 ```
 
 ### 3. Активация виртуального окружения (уже настроено)
