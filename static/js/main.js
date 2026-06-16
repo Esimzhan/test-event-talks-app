@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnClearSearch: document.getElementById('btn-clear-search'),
         tabButtons: document.querySelectorAll('.tab-btn'),
         sortSelect: document.getElementById('sort-select'),
+        btnExportCsv: document.getElementById('btn-export-csv'),
         
         // Stats
         statTotal: document.getElementById('stat-total').querySelector('.stat-value'),
@@ -370,8 +371,26 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             // Setup buttons event listeners
-            card.querySelector('.btn-copy').addEventListener('click', () => {
+            const copyBtn = card.querySelector('.btn-copy');
+            copyBtn.addEventListener('click', () => {
                 copyToClipboard(update.contentText);
+                const originalHtml = copyBtn.innerHTML;
+                copyBtn.innerHTML = `<i data-lucide="check"></i> Copied!`;
+                copyBtn.disabled = true;
+                if (window.lucide) {
+                    window.lucide.createIcons({
+                        node: copyBtn
+                    });
+                }
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHtml;
+                    copyBtn.disabled = false;
+                    if (window.lucide) {
+                        window.lucide.createIcons({
+                            node: copyBtn
+                        });
+                    }
+                }, 2000);
             });
 
             card.querySelector('.btn-tweet-trigger').addEventListener('click', () => {
@@ -395,6 +414,42 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Clipboard Error:", err);
             showToast("Failed to copy content.", "error");
         });
+    }
+
+    // --- Export to CSV Utility ---
+    function exportToCSV() {
+        if (state.filteredUpdates.length === 0) {
+            showToast("No data to export.", "error");
+            return;
+        }
+
+        const headers = ["Date", "Type", "Category", "Link", "Content"];
+        const csvRows = [headers.join(",")];
+
+        state.filteredUpdates.forEach(u => {
+            const cleanText = u.contentText.replace(/"/g, '""');
+            const row = [
+                `"${u.date}"`,
+                `"${u.type}"`,
+                `"${u.category.toUpperCase()}"`,
+                `"${u.link}"`,
+                `"${cleanText}"`
+            ];
+            csvRows.push(row.join(","));
+        });
+
+        // Add UTF-8 BOM for proper Russian Cyrillic display in Excel
+        const csvContent = "\uFEFF" + csvRows.join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `bigquery_release_notes_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("CSV exported successfully!", "success");
     }
 
     // --- Toast Notifications ---
@@ -660,6 +715,9 @@ document.addEventListener('DOMContentLoaded', () => {
             state.sortOrder = e.target.value;
             filterAndRender();
         });
+
+        // Export CSV
+        elements.btnExportCsv.addEventListener('click', exportToCSV);
 
         // Modal Composer Events
         elements.tweetTextarea.addEventListener('input', () => {
